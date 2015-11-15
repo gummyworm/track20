@@ -1,0 +1,28 @@
+.segment "SETUP"
+.include "bitmap.inc"
+
+; BASIC header with a SYS call 
+.word head ; Load address 
+head: .word @Next 
+.word .version ; Line number 
+.byte $9e ; SYS token 
+.asciiz "4621"
+;.byte <(((start / 1000) .mod 10) + $30) 
+;.byte <(((start / 100) .mod 10) + $30) 
+;.byte <(((start / 10) .mod 10) + $30) 
+;.byte <(((start / 1) .mod 10) + $30) 
+;.byte $00 ; End of BASIC line 
+@Next: .word 0 ; BASIC end marker 
+start:
+        jmp enter
+
+.CODE
+enter:
+        jsr bm::init
+        ldx #<test
+        ldy #>test
+        lda #10
+        jsr bm::drawtext
+        jmp *
+
+test: .byt "hello world"

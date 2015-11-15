@@ -1,0 +1,14 @@
+al 002042 .__bm_clr
+al 00201A .__bm_columns
+al 0020A5 .__bm_drawtext
+al 0020A5 .__bm_drawwindow
+al 00207C .__bm_init
+al 002119 .__bm_textlen
+al 00248C .__str_append
+al 0024A9 .__str_hex2asc
+al 00247E .__str_len
+al 002444 .__window_draw
+al 002466 .__window_handlekey
+al 002446 .__window_hide
+al 002445 .__window_show
+al 002447 .__window_update

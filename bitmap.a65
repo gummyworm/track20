@@ -1,0 +1,265 @@
+.include "types.inc"
+
+;--------------------------------------
+;the offsets to the top of every bitmap column
+.export __bm_columns
+__bm_columns:
+.repeat 20, I
+        .word ($1000 + ($c0 * I))
+.endrepeat
+.CODE
+
+;------------------------------------------------------------------------------
+; clr clears the bitmap and color memory.
+.export __bm_clr
+.proc __bm_clr
+        lda #$00
+        tax
+@0:     sta $1100,x
+        sta $1200,x
+        sta $1300,x
+        sta $1400,x
+        sta $1500,x
+        sta $1600,x
+        sta $1700,x
+        sta $1800,x
+        sta $1900,x
+        sta $1a00,x
+        sta $1b00,x
+        sta $1c00,x
+        sta $1d00,x
+        sta $1e00,x
+        sta $1f00,x
+
+        sta $9400,x
+        sta $9500,x
+        dex
+        bne @0
+
+        rts
+.endproc 
+
+;--------------------------------------
+;MINIGRAFIK VIC/memory initialization
+;code by Mike
+;
+.export __bm_init
+.proc __bm_init
+        clc
+        lda #$10
+        tay
+@0:     sta $0ff0,y
+        adc #$0c
+        bcc @1
+        sbc #$ef
+@1:     iny
+        bne @0
+
+        ldy #$05
+@2:     clc
+        lda $ede4,y
+        adc @inittab,y
+        sta $9000,y
+        dey
+        bpl @2
+      
+        jsr __bm_clr
+        rts
+@inittab: .byte $02,$fe,$fe,$eb,$00,$0c
+.endproc
+
+;------------------------------------------------------------------------------
+.export __bm_drawwindow
+.proc __bm_drawwindow
+;window to draw address in (<.X, >.Y)
+;
+.endproc
+
+;------------------------------------------------------------------------------
+.export __bm_drawtext
+.proc __bm_drawtext
+;drawtext draws the string in (<.X, >.Y) at row .A
+;
+textByte = $24
+textLeft = $25
+textRight = $27
+textDst = $29
+textSrc = $4e
+        stx textSrc
+        sty textSrc+1
+        asl
+        asl
+        asl
+        sta textDst
+        lda #$11
+        sta textDst+1
+        ldy #$00
+TDraw_00:
+        lda (textSrc),y
+        iny
+        sta textLeft
+        lda #$00
+        asl textLeft
+        rol
+        asl textLeft
+        rol
+        asl textLeft
+        rol
+        sta textLeft+1
+        clc
+        lda textLeft
+        adc #<((TCharset-256) .mod 256)
+        sta textLeft
+        lda textLeft+1
+        adc #<((TCharset-256) / 256)
+        sta textLeft+1
+        lda (textSrc),y
+        iny
+        sta textRight
+        lda #$00
+        asl textRight
+        rol
+        asl textRight
+        rol
+        asl textRight
+        rol
+        sta textRight+1
+        clc
+        lda textRight
+        adc #<((TCharset-256) .mod 256)
+        sta textRight
+        lda textRight+1
+        adc #<((TCharset-256) / 256)
+        sta textRight+1
+        tya
+        pha
+        ldy #$00
+TDraw_01:
+        lda (textLeft),y
+        and #$f0
+        sta textByte
+        lda (textRight),y
+        and #$0f
+        ora textByte
+        sta (textDst),y
+        iny
+        cpy #8
+        bne TDraw_01
+        pla
+        tay
+        clc
+        lda textDst
+        adc #192
+        sta textDst
+        lda textDst+1
+        adc #0
+        sta textDst+1
+.export __bm_textlen=*+1
+        cpy #40
+        bne TDraw_00
+        rts
+TCharset:
+ .byte   0,   0,   0,   0,   0,   0,   0,   0
+ .byte   0,  34,  34,  34,  34,   0,  34,   0
+ .byte   0,  85,  85,   0,   0,   0,   0,   0
+ .byte   0,  85, 119,  85,  85, 119,  85,   0
+ .byte   0,  34,  51, 102,  51, 102,  34,   0
+ .byte   0,  85,  17,  34,  34,  68,  85,   0
+ .byte   0, 102, 102,  51, 102, 102,  51,   0
+ .byte  34,  34,   0,   0,   0,   0,   0,   0
+ .byte   0,  17,  34,  34,  34,  34,  17,   0
+ .byte   0,  68,  34,  34,  34,  34,  68,   0
+ .byte   0,   0,   0,  85,  34,  85,   0,   0
+ .byte   0,   0,   0,  34, 119,  34,   0,   0
+ .byte   0,   0,   0,   0,   0,   0,  34,  68
+ .byte   0,   0,   0,   0, 119,   0,   0,   0
+ .byte   0,   0,   0,   0,   0,   0,  34,   0
+ .byte   0,  17,  17,  34,  34,  68,  68,   0
+ .byte   0, 119,  85,  85,  85,  85, 119,   0
+ .byte   0,  17,  17,  17,  17,  17,  17,   0
+ .byte   0, 119,  17, 119,  68,  68, 119,   0
+ .byte   0, 119,  17, 119,  17,  17, 119,   0
+ .byte   0,  85,  85, 119,  17,  17,  17,   0
+ .byte   0, 119,  68, 119,  17,  17, 119,   0
+ .byte   0, 119,  68, 119,  85,  85, 119,   0
+ .byte   0, 119,  17,  17,  17,  17,  17,   0
+ .byte   0, 119,  85, 119,  85,  85, 119,   0
+ .byte   0, 119,  85, 119,  17,  17, 119,   0
+ .byte   0,   0,   0,  34,   0,   0,  34,   0
+ .byte   0,   0,   0,  34,   0,   0,  34,  68
+ .byte   0,   0,  17,  34,  68,  34,  17,   0
+ .byte   0,   0,   0, 119,   0, 119,   0,   0
+ .byte   0,   0,  68,  34,  17,  34,  68,   0
+ .byte   0,  34,  85,  17,  34,   0,  34,   0
+ .byte   0,  51,  85,  85,  85,  68,  51,   0
+ .byte   0,  34,  85,  85, 119,  85,  85,   0
+ .byte   0, 102,  85, 102,  85,  85, 102,   0
+ .byte   0,  51,  68,  68,  68,  68,  51,   0
+ .byte   0, 102,  85,  85,  85,  85, 102,   0
+ .byte   0, 119,  68, 102,  68,  68, 119,   0
+ .byte   0, 119,  68, 102,  68,  68,  68,   0
+ .byte   0,  51,  68,  68,  85,  85,  51,   0
+ .byte   0,  85,  85, 119,  85,  85,  85,   0
+ .byte   0, 119,  34,  34,  34,  34, 119,   0
+ .byte   0,  51,  17,  17,  17,  85,  34,   0
+ .byte   0,  85,  85, 102,  85,  85,  85,   0
+ .byte   0,  68,  68,  68,  68,  68, 119,   0
+ .byte   0,  85, 119,  85,  85,  85,  85,   0
+ .byte   0, 102,  85,  85,  85,  85,  85,   0
+ .byte   0,  34,  85,  85,  85,  85,  34,   0
+ .byte   0, 102,  85,  85, 102,  68,  68,   0
+ .byte   0,  34,  85,  85,  85, 102,  51,   0
+ .byte   0, 102,  85,  85, 102,  85,  85,   0
+ .byte   0,  51,  68,  34,  17,  17, 102,   0
+ .byte   0, 119,  34,  34,  34,  34,  34,   0
+ .byte   0,  85,  85,  85,  85,  85,  51,   0
+ .byte   0,  85,  85,  85,  85,  34,  34,   0
+ .byte   0,  85,  85,  85,  85, 119,  85,   0
+ .byte   0,  85,  85,  34,  85,  85,  85,   0
+ .byte   0,  85,  85,  85,  34,  34,  34,   0
+ .byte   0, 119,  17,  34,  34,  68, 119,   0
+ .byte   0,  51,  34,  34,  34,  34,  51,   0
+ .byte   0,  68,  68,  34,  34,  17,  17,   0
+ .byte   0, 102,  34,  34,  34,  34, 102,   0
+ .byte  34,  85,   0,   0,   0,   0,   0,   0
+ .byte   0,   0,   0,   0,   0,   0,   0, 255
+ .byte  34,  17,   0,   0,   0,   0,   0,   0
+ .byte   0,   0,   0,  51,  85,  85,  51,   0
+ .byte   0,  68,  68, 102,  85,  85, 102,   0
+ .byte   0,   0,   0,  51,  68,  68,  51,   0
+ .byte   0,  17,  17,  51,  85,  85,  51,   0
+ .byte   0,   0,   0,  34,  85, 102,  51,   0
+ .byte   0,  17,  34, 119,  34,  34,  34,   0
+ .byte   0,   0,   0,  51,  85,  51,  17, 102
+ .byte   0,  68,  68, 102,  85,  85,  85,   0
+ .byte   0,  34,   0,  34,  34,  34,  34,   0
+ .byte   0,  34,   0,  34,  34,  34,  34,  68
+ .byte   0,  68,  68,  85, 102,  85,  85,   0
+ .byte   0,  34,  34,  34,  34,  34,  34,   0
+ .byte   0,   0,   0,  85, 119,  85,  85,   0
+ .byte   0,   0,   0, 102,  85,  85,  85,   0
+ .byte   0,   0,   0,  34,  85,  85,  34,   0
+ .byte   0,   0,   0, 102,  85, 102,  68,  68
+ .byte   0,   0,   0,  51,  85,  51,  17,  17
+ .byte   0,   0,   0, 102,  85,  68,  68,   0
+ .byte   0,   0,   0,  51, 102,  51, 102,   0
+ .byte   0,  34,  34, 119,  34,  34,  51,   0
+ .byte   0,   0,   0,  85,  85,  85,  51,   0
+ .byte   0,   0,   0,  85,  85,  34,  34,   0
+ .byte   0,   0,   0,  85,  85, 119,  85,   0
+ .byte   0,   0,   0,  85,  34,  34,  85,   0
+ .byte   0,   0,   0,  85,  85,  51,  17, 102
+ .byte   0,   0,   0, 119,  17,  34, 119,   0
+ .byte   0,  51,  34,  68,  34,  34,  51,   0
+ .byte   0,  34,  34,   0,  34,  34,  34,   0
+ .byte   0, 102,  34,  17,  34,  34, 102,   0
+ .byte   0,   0,   0,  85, 170,   0,   0,   0
+ .byte   0,   0,   0,   0,   0,   0,   0,   0
+ ; CUSTOM CHARS. starting @ 128
+ .byte   $44,$44,$44,$44,$44,$44,$44,$44
+ .byte   $ff,$00,$00,$00,$00,$00,$00,$ff
+ .byte   $88,$88,$88,$88,$88,$88,$88,$88
+ .byte   $ff,$00,$00,$00,$00,$00,$00,$00
+.endproc
+
+
